@@ -1,0 +1,59 @@
+﻿<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+  <meta charset="utf-8">
+  <title>Login Page</title>
+</head>
+
+<body>
+  <script type="text/javascript">
+      function getQueryVariable(variable) {
+        const query = window.location.search.substring(1);
+        const vars = query.split('&');
+        for (let i = 0; i < vars.length; i++) {
+          let pair = vars[i].split('=');
+          if (decodeURIComponent(pair[0]) == variable) {
+            return decodeURIComponent(pair[1]);
+          }
+        }
+      }
+
+      async function logMeIn() {
+        const returnUrl = getQueryVariable('ReturnUrl');
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        // call the API Identity Server
+        const response = await fetch('https://localhost:5000/api/authenticate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            email,
+            password,
+            returnUrl
+          })
+        });
+
+        const data = await response.json();
+
+        if (data && data.isOk) {
+         window.location = data.redirectUrl;
+        }
+      }
+
+  </script>
+
+  <form>
+    <label for="email">email</label>
+    <input type="text" name="email" id="email" value="">
+    <label for="password">password</label>
+    <input type="password" name="password" id="password" value="">
+    <button type="button" name="button" id="login" onclick="logMeIn()">Login</button>
+  </form>
+</body>
+
+</html>
