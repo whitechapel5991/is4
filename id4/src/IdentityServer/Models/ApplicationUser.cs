@@ -6,15 +6,15 @@ using System.Threading.Tasks;
 
 namespace IdentityServer.Models
 {
-    public class ApplicationUser : IdentityUser
-    {
-        public ApplicationUser() : base()
-        {
+    //public class ApplicationUser : IdentityUser
+    //{
+    //    public ApplicationUser() : base()
+    //    {
 
-        }
-        public ApplicationUser(string userName) : base(userName)
-        {
+    //    }
+    //    public ApplicationUser(string userName) : base(userName)
+    //    {
 
-        }
-    }
+    //    }
+    //}
 }

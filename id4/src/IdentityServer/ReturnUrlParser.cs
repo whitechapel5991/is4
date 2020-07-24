@@ -104,7 +104,7 @@ namespace IdentityServer
             return new NameValueCollection();
         }
 
-        [DebuggerStepThrough]
+        //[DebuggerStepThrough]
         public static bool IsLocalUrl(this string url)
         {
             if (string.IsNullOrEmpty(url))
@@ -151,12 +151,12 @@ namespace IdentityServer
             return false;
         }
 
-        [DebuggerStepThrough]
+        //[DebuggerStepThrough]
         internal static AuthorizationRequest ToAuthorizationRequest(this ValidatedAuthorizeRequest request)
         {
             var authRequest = new AuthorizationRequest
             {
-                Client = new Client() { ClientId = request.ClientId },
+                Client = new Client() { ClientId = request.ClientId/*, AllowedScopes = request.RequestedScopes*/ },
                 //ClientId = request.ClientId,
                 RedirectUri = request.RedirectUri,
                 DisplayMode = request.DisplayMode,
@@ -170,12 +170,26 @@ namespace IdentityServer
                 //ScopesRequested = request.RequestedScopes,
             };
 
+            //var authRequest = new AuthorizationRequest
+            //{
+            //    ClientId = request.ClientId,
+            //    RedirectUri = request.RedirectUri,
+            //    DisplayMode = request.DisplayMode,
+            //    UiLocales = request.UiLocales,
+            //    IdP = request.GetIdP(),
+            //    Tenant = request.GetTenant(),
+            //    LoginHint = request.LoginHint,
+            //    PromptMode = request.PromptMode,
+            //    AcrValues = request.GetAcrValues(),
+            //    ScopesRequested = request.RequestedScopes,
+            //};
+
             authRequest.Parameters.Add(request.Raw);
 
             return authRequest;
         }
 
-        [DebuggerStepThrough]
+        //[DebuggerStepThrough]
         public static NameValueCollection AsNameValueCollection(this IDictionary<string, StringValues> collection)
         {
             var nv = new NameValueCollection();

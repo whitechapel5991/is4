@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0. See LICENSE in the project root for license information.
 
 
+using IdentityModel;
 using IdentityServer.Data;
 using IdentityServer.Models;
 using IdentityServer4;
@@ -39,31 +40,16 @@ namespace IdentityServer
 
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddControllers();
             var migrationsAssembly = typeof(Startup).GetTypeInfo().Assembly.GetName().Name;
 
             services.AddDbContext<ApplicationDbContext>(builder =>
                 builder.UseSqlServer(ConnectionString, sqlOptions => sqlOptions.MigrationsAssembly(migrationsAssembly)));
-            services.AddIdentity<ApplicationUser, IdentityRole>()
-                .AddEntityFrameworkStores<ApplicationDbContext>();
-            //services.AddDbContext<ApplicationDbContext>(options =>
-            //    options.UseSqlServer(this.ConnectionString));
-
-            //services.AddIdentity<ApplicationUser, IdentityRole>()
-            //    .AddEntityFrameworkStores<ApplicationDbContext>()
-            //    .AddDefaultTokenProviders();
+            services.AddIdentity<IdentityUser, IdentityRole>()
+                .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
 
             Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
-
-            services.AddCors(setup =>
-            {
-                setup.AddDefaultPolicy(policy =>
-                {
-                    policy.AllowAnyHeader();
-                    policy.AllowAnyMethod();
-                    policy.WithOrigins("http://localhost:5001");
-                    policy.AllowCredentials();
-                });
-            });
 
             services.AddMvcCore()
                 .SetCompatibilityVersion(Microsoft.AspNetCore.Mvc.CompatibilityVersion.Latest);
@@ -84,7 +70,7 @@ namespace IdentityServer
                 //options.Events.RaiseFailureEvents = true;
                 //options.Events.RaiseSuccessEvents = true;
 
-                //// see https://identityserver4.readthedocs.io/en/latest/topics/resources.html
+                //////// see https://identityserver4.readthedocs.io/en/latest/topics/resources.html
                 //options.EmitStaticAudienceClaim = true;
             }
             );
@@ -104,8 +90,6 @@ namespace IdentityServer
                     options.ConfigureDbContext = builder =>
                         builder.UseSqlServer(ConnectionString, sqlOptions => sqlOptions.MigrationsAssembly(migrationsAssembly)));
 
-            // ASP.NET Identity integration
-            builder.AddAspNetIdentity<ApplicationUser>();
 
             if (Environment.IsDevelopment())
             {
@@ -116,14 +100,35 @@ namespace IdentityServer
                 throw new Exception("need to configure key material");
             }
 
+            services.AddCors(setup =>
+            {
+                setup.AddDefaultPolicy(policy =>
+                {
+                    policy.AllowAnyHeader();
+                    policy.AllowAnyMethod();
+                    policy.WithOrigins("http://localhost:5001", "http://localhost:5005", "http://localhost:5002");
+                    policy.AllowCredentials();
+                });
+            });
+
             var cors = new DefaultCorsPolicyService(new LoggerFactory().CreateLogger<DefaultCorsPolicyService>())
             {
                 AllowAll = true
             };
 
-            services.AddControllers();
+            services.AddAuthentication();
+
             services.AddSingleton<ICorsPolicyService>(cors);
             services.AddTransient<IReturnUrlParser, ReturnUrlParser>();
+
+            // ASP.NET Identity integration
+            builder.AddAspNetIdentity<IdentityUser>();
+
+            //services.AddAuthentication("MyCookie")
+            //    .AddCookie("MyCookie", options =>
+            //    {
+            //        options.Cookie.SameSite = Microsoft.AspNetCore.Http.SameSiteMode.None;
+            //    });
         }
 
         public void Configure(IApplicationBuilder app)
@@ -133,7 +138,11 @@ namespace IdentityServer
             if (Environment.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                app.UseDatabaseErrorPage();
             }
+
+            //app.UseHsts();
+            //app.UseHttpsRedirection();
 
             InitializeDbTestData(app);
 
@@ -141,13 +150,14 @@ namespace IdentityServer
 
             app.UseRouting();
 
-            //app.UseAuthorization();
+            app.UseIdentityServer();
+            app.UseAuthorization();
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers();
+                endpoints.MapDefaultControllerRoute();
             });
 
-            app.UseIdentityServer();
+
         }
 
         private static void InitializeDbTestData(IApplicationBuilder app)
@@ -196,18 +206,19 @@ namespace IdentityServer
                     context.SaveChanges();
                 }
 
-                var userManager = serviceScope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+                var userManager = serviceScope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
                 if (!userManager.Users.Any())
                 {
                     foreach (var testUser in Config.GetTestUsers())
                     {
-                        var identityUser = new ApplicationUser(testUser.Username)
+                        var identityUser = new IdentityUser(testUser.Username)
                         {
-                            Id = testUser.SubjectId
+                            Id = testUser.SubjectId,
+                            
+                            Email = testUser.Claims.First(claim => claim.Type == JwtClaimTypes.Email).Value,
                         };
 
-                        userManager.CreateAsync(identityUser, testUser.Password).Wait();
-                        userManager.UpdateAsync(identityUser).Wait();
+                        var user = userManager.CreateAsync(identityUser, testUser.Password).Result;
                         userManager.AddClaimsAsync(identityUser, testUser.Claims.ToList()).Wait();
                     }
                 }

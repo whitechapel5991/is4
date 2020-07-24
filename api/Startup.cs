@@ -19,33 +19,57 @@ namespace api
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            //Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
+            Microsoft.IdentityModel.Logging.IdentityModelEventSource.ShowPII = true;
 
+            services.AddControllers();
 
             //services
             //    .AddMvcCore()
             //    .AddAuthorization()
             //    .SetCompatibilityVersion(CompatibilityVersion.Latest);
 
+            // accepts any access token issued by identity server
             services.AddAuthentication("Bearer")
-                .AddIdentityServerAuthentication("Bearer", options =>
+                .AddJwtBearer("Bearer", options =>
                 {
-                    options.Authority = Configuration["Authority"] ?? "https://localhost:5000";
-                    options.ApiName = "api1";
+                    options.Authority = Configuration["Authority"] ?? "http://localhost:5000";
+                    //options.RequireHttpsMetadata = false;
+                    //options.Audience = "api";
+                    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+                    {
+                        ValidateAudience = false,
+                    };
                 });
+
+            // adds an authorization policy to make sure the token is for scope 'api1'
+            services.AddAuthorization(options =>
+            {
+                options.AddPolicy("ApiScope", policy =>
+                {
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim("scope", "api.read");
+                });
+            });
+
+            //services.AddAuthentication("Bearer")
+            //    .AddIdentityServerAuthentication("Bearer", options =>
+            //    {
+            //        options.Authority = Configuration["Authority"] ?? "https://localhost:5000";
+            //        options.ApiName = "api";
+            //    });
 
             //services.AddAuthorization();
 
-            //services.AddCors(setup =>
-            //{
-            //    setup.AddPolicy("ApiScope", policy =>
-            //    {
-            //        policy
-            //            .AllowAnyHeader()
-            //            .AllowAnyMethod()
-            //            .AllowAnyOrigin();
-            //    });
-            //});
+            services.AddCors(setup =>
+            {
+                setup.AddDefaultPolicy(policy =>
+                {
+                    policy
+                        .AllowAnyHeader()
+                        .AllowAnyMethod()
+                        .AllowAnyOrigin();
+                });
+            });
             //services.AddAuthorization(options =>
             //{
             //    options.AddPolicy("ApiScope", policy =>
@@ -54,8 +78,18 @@ namespace api
             //        policy.RequireClaim("scope", "identity.api");
             //    });
             //});
+            //services.AddCors(setup =>
+            //{
+            //    setup.AddDefaultPolicy(policy =>
+            //    {
+            //        policy
+            //            .AllowAnyHeader()
+            //            .AllowAnyMethod()
+            //            .AllowAnyOrigin();
+            //    });
+            //});
 
-            services.AddControllers();
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -73,14 +107,15 @@ namespace api
                 app.UseHsts();
             }
 
-            //app.UseCors();
+            app.UseCors();
 
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapDefaultControllerRoute();
+                endpoints.MapControllers()
+                    .RequireAuthorization("ApiScope");
             });
 
         }

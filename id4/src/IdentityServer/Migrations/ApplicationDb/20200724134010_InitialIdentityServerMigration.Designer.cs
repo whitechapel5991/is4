@@ -7,10 +7,10 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
-namespace IdentityServer.Migrations
+namespace IdentityServer.Migrations.ApplicationDb
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20200722195449_InitialIdentityServerMigration")]
+    [Migration("20200724134010_InitialIdentityServerMigration")]
     partial class InitialIdentityServerMigration
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
